@@ -1,4 +1,4 @@
-# lucky7
+# lucky7 | Lightweight on-host monitoring tool
 ---------
 lightweight on-host monitoring tool that tracks suspicious local activity
 __________________________________________________________________________
