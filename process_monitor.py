@@ -3,6 +3,7 @@ import json
 import psutil
 from datetime import datetime
 from core.config import CONFIG_DIR
+from core import reputation, config as cfg_module
 
 # Define the baseline file location.
 BASELINE_FILE = os.path.join(CONFIG_DIR, "baseline.json")
@@ -79,7 +80,7 @@ def scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold
         return []
     
     events = []
-    
+    global_config = cfg_module.load_config() or cfg_module.DEFAULT_CONFIG
     # Main loop: flag processes that are new or match suspicious keywords,
     # skipping any process if its name contains a whitelisted substring.
     for proc_name in current_processes:
@@ -99,15 +100,18 @@ def scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold
             for (pid, create_time) in details_list:
                 timestamp = datetime.fromtimestamp(create_time).strftime('%Y-%m-%d %H:%M:%S')
                 connections = get_process_connections(pid)
+                rep_status, rep_details = reputation.get_event_reputation(",".join(connections) if connections else "", global_config)
                 event = {
                     "timestamp": timestamp,
                     "process_name": proc_name,
                     "pid": pid,
                     "reason": "; ".join(reasons),
-                    "connections": ", ".join(connections) if connections else ""
+                    "connections": ", ".join(connections) if connections else "",
+                    "reputation": rep_status,# Summary status
+                    "reputation_details":rep_details # Detailed lookup info (hidden by default)
                 }
                 events.append(event)
-                print(f"[ALERT] {timestamp}: {proc_name} (PID: {pid}) => {event['reason']}")
+                print(f"[ALERT] {timestamp}: {proc_name} (PID: {pid}) => {event['reason']}| Reputation: {event['reputation']}")
                 if connections:
                     print(f"        Connections: {event['connections']}")
     
@@ -120,12 +124,15 @@ def scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold
                 if cpu_usage >= kworker_cpu_threshold:
                     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     connections = get_process_connections(proc.info['pid'])
+                    rep_status, rep_details = reputation.get_event_reputation(",".join(connections) if connections else "", global_config)
                     event = {
                         "timestamp": timestamp,
                         "process_name": name,
                         "pid": proc.info['pid'],
                         "reason": f"kworker high CPU usage: {cpu_usage}%",
-                        "connections": ", ".join(connections) if connections else ""
+                        "connections": ", ".join(connections) if connections else "",
+                        "reputation": rep_status,
+                        "reputation_details": rep_details
                     }
                     events.append(event)
                     print(f"[ALERT] {timestamp}: {name} (PID: {proc.info['pid']}) => kworker high CPU usage: {cpu_usage}%")

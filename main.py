@@ -62,6 +62,8 @@ def events_command(args):
                 print(f"    Connections: {event['connections']}")
             else:
                 print("    Connections: None")
+                # Here we show reputation details (detailed view) in the events command.
+                print(f"    Reputation: {event['reputation']} ({event['reputation_details']})")
     else:
         print("[INFO] No events found in the database.")
 

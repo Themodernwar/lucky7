@@ -22,6 +22,14 @@ DEFAULT_CONFIG = {
     },
     "logging": {
         "level": "INFO"
+    },
+    "reputation": {
+        "api_key": "", # If provided, VirusTotal will be used.
+
+        # Either "virustotal" (if key provided) or fallback "geofencing".
+        "method": "geofencing",
+        # For geofencing: trusted if IP is located in this country.
+        "geofence_country": "United States"
     }
 }
 

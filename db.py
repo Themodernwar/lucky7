@@ -19,7 +19,9 @@ def init_db():
             process_name TEXT,
             pid INTEGER,
             reason TEXT,
-            connections TEXT
+            connections TEXT,
+            reputation TEXT,
+            reputation_details TEXT
         )
     """)
     conn.commit()
@@ -34,9 +36,9 @@ def insert_event(event):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-        INSERT INTO events (timestamp, process_name, pid, reason, connections) 
+        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details) 
         VALUES (?, ?, ?, ?, ?)
-    """, (event.get("timestamp"), event.get("process_name"), event.get("pid"), event.get("reason"), event.get("connections")))
+    """, (event.get("timestamp"), event.get("process_name"), event.get("pid"), event.get("reason"), event.get("connections"), event.get("reputation"), event.get("reputation_details")))
     conn.commit()
     conn.close()
 
