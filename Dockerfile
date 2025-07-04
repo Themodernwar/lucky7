@@ -1,3 +1,5 @@
-FROM ubuntu:22.04
-CMD ["echo", "Hello, World!"]
-
+FROM python:3.10-slim
+WORKDIR /app
+COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+ENTRYPOINT ["python", "main.py"]

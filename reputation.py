@@ -18,7 +18,7 @@ def map_score_to_state(score: int) -> str:
 
 
 def store_history(entity, entity_type, status, details, config):
-    retention = config.get("reputation", {}).get("history_retention_days", 30)
+    retention = config.get("history_retention_days", 30)
     db.insert_reputation_history(entity, entity_type, status, details)
     db.purge_old_history(retention)
 
