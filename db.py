@@ -7,6 +7,9 @@ DB_PATH = os.path.join(CONFIG_DIR, "lucky7.db")
 
 def init_db():
     """Initializes the SQLite database and tables."""
+    # Ensure the configuration directory exists so SQLite can create the file
+    if not os.path.exists(CONFIG_DIR):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
