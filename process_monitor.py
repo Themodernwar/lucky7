@@ -2,8 +2,9 @@ import os
 import json
 import psutil
 from datetime import datetime
-from core.config import CONFIG_DIR
-from core import reputation, config as cfg_module
+from config import CONFIG_DIR
+import reputation
+import config as cfg_module
 
 # Define the baseline file location.
 BASELINE_FILE = os.path.join(CONFIG_DIR, "baseline.json")

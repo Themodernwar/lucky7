@@ -1,12 +1,12 @@
 import argparse
-from core import config
+import config
 
 def init_command():
     """
     Initializes the configuration and the local database.
     """
     config.create_default_config()
-    from core import db
+    import db
     db.init_db()
 
 def start_command():
@@ -33,11 +33,11 @@ def start_command():
             default_monitoring.get("kworker_cpu_threshold", 20)
         )
         
-        from core import process_monitor
+        import process_monitor
         events = process_monitor.scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold)
         if events:
             print(f"[INFO] {len(events)} suspicious event(s) detected.")
-            from core import db
+            import db
             db.insert_events(events)
             print("[INFO] Events saved to the database.")
         else:
@@ -49,7 +49,7 @@ def events_command(args):
     """
     Retrieves and displays stored events from the database with optional filtering.
     """
-    from core import db
+    import db
     limit = args.limit
     process_filter = args.process_filter
     events = db.fetch_events(limit=limit, process_name_filter=process_filter)
@@ -62,8 +62,8 @@ def events_command(args):
                 print(f"    Connections: {event['connections']}")
             else:
                 print("    Connections: None")
-                # Here we show reputation details (detailed view) in the events command.
-                print(f"    Reputation: {event['reputation']} ({event['reputation_details']})")
+            # Show reputation details regardless of connection presence
+            print(f"    Reputation: {event['reputation']} ({event['reputation_details']})")
     else:
         print("[INFO] No events found in the database.")
 
