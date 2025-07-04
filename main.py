@@ -168,10 +168,6 @@ def main():
     events_parser = subparsers.add_parser("events", help="View stored suspicious events")
     events_parser.add_argument("--limit", type=int, default=100, help="Maximum number of events to display (default: 100)")
     events_parser.add_argument("--process-filter", type=str, default=None, help="Filter events by process name (substring match)")
-
-    score_parser = subparsers.add_parser("score", help="Score a website for phishing risk")
-    score_parser.add_argument("url", help="URL to evaluate")
-
     check_parser = subparsers.add_parser("check", help="Check reputation for an IP, domain, URL, or file")
     group = check_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ip", type=str, help="IP address to lookup")
