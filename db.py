@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from core.config import CONFIG_DIR
+from config import CONFIG_DIR
 
 # Define the database file path.
 DB_PATH = os.path.join(CONFIG_DIR, "lucky7.db")
@@ -35,10 +35,21 @@ def insert_event(event):
     """
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("""
-        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details) 
-        VALUES (?, ?, ?, ?, ?)
-    """, (event.get("timestamp"), event.get("process_name"), event.get("pid"), event.get("reason"), event.get("connections"), event.get("reputation"), event.get("reputation_details")))
+    c.execute(
+        """
+        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            event.get("timestamp"),
+            event.get("process_name"),
+            event.get("pid"),
+            event.get("reason"),
+            event.get("connections"),
+            event.get("reputation"),
+            event.get("reputation_details"),
+        ),
+    )
     conn.commit()
     conn.close()
 
@@ -50,10 +61,24 @@ def insert_events(events):
         return
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.executemany("""
-        INSERT INTO events (timestamp, process_name, pid, reason, connections) 
-        VALUES (?, ?, ?, ?, ?)
-    """, [(e.get("timestamp"), e.get("process_name"), e.get("pid"), e.get("reason"), e.get("connections")) for e in events])
+    c.executemany(
+        """
+        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                e.get("timestamp"),
+                e.get("process_name"),
+                e.get("pid"),
+                e.get("reason"),
+                e.get("connections"),
+                e.get("reputation"),
+                e.get("reputation_details"),
+            )
+            for e in events
+        ],
+    )
     conn.commit()
     conn.close()
 
@@ -65,18 +90,18 @@ def fetch_events(limit=100, process_name_filter=None):
     c = conn.cursor()
     if process_name_filter:
         query = """
-            SELECT id, timestamp, process_name, pid, reason, connections 
-            FROM events 
-            WHERE process_name LIKE ? 
-            ORDER BY id DESC 
+            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details
+            FROM events
+            WHERE process_name LIKE ?
+            ORDER BY id DESC
             LIMIT ?
         """
         c.execute(query, (f"%{process_name_filter}%", limit))
     else:
         query = """
-            SELECT id, timestamp, process_name, pid, reason, connections 
-            FROM events 
-            ORDER BY id DESC 
+            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details
+            FROM events
+            ORDER BY id DESC
             LIMIT ?
         """
         c.execute(query, (limit,))
@@ -91,7 +116,9 @@ def fetch_events(limit=100, process_name_filter=None):
             "process_name": row[2],
             "pid": row[3],
             "reason": row[4],
-            "connections": row[5]
+            "connections": row[5],
+            "reputation": row[6],
+            "reputation_details": row[7],
         }
         events.append(event)
     return events
