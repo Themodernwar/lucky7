@@ -111,7 +111,6 @@ def events_command(args):
     else:
         print("[INFO] No events found in the database.")
 
-
 def score_command(args):
     """Scores a website for phishing or scamming potential."""
     url = args.url
@@ -123,7 +122,6 @@ def score_command(args):
         print(f"{k}: {v}")
     print(f"Score: {result['score']}")
     print(f"Verdict: {result['verdict']}")
-
 
 def check_command(args):
     """Lookup reputation for a given IP, domain, or file."""
@@ -180,6 +178,9 @@ def main():
     group.add_argument("--domain", type=str, help="Domain to lookup")
     group.add_argument("--url", type=str, help="URL to lookup")
     group.add_argument("--file", type=str, help="File path to lookup (SHA256 will be calculated)")
+    # Command to score a website for phishing risk
+    score_parser = subparsers.add_parser("score", help="Score a website for phishing risk")
+    score_parser.add_argument("url", help="URL to evaluate")
     
     args = parser.parse_args()
     

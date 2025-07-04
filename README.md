@@ -90,4 +90,3 @@ Heuristic lookups consider multiple factors:
 
 * URL checks flag unencrypted links and images larger than the configured threshold.
 * Processes named like telemetry or analytics with outbound traffic are logged with encryption status.
-
