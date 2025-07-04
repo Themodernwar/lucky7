@@ -1,3 +1,5 @@
 psutil
 requests
 pyyaml
+tldextract
+python-whois

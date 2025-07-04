@@ -38,3 +38,13 @@ Display stored events:
 python main.py events
 ```
 
+Score a website for phishing risk:
+
+```bash
+python main.py score <url>
+```
+
+The tool attempts to infer a website's intention category such as **Banking**,
+**Entertainment**, **Shopping**, **Social**, **News**, **Education**, **Government**, **Adult**, or **General**. The score
+is based on HTTPS usage, suspicious keywords, domain age and structure, reputation of the top-level domain, and additional heuristics like repeated characters or the use of an IP address.
+
