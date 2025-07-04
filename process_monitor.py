@@ -82,6 +82,10 @@ def scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold
     
     events = []
     global_config = cfg_module.load_config() or cfg_module.DEFAULT_CONFIG
+    telemetry_keywords = global_config.get("monitoring", {}).get(
+        "telemetry_keywords",
+        cfg_module.DEFAULT_CONFIG.get("monitoring", {}).get("telemetry_keywords", []),
+    )
     # Main loop: flag processes that are new or match suspicious keywords,
     # skipping any process if its name contains a whitelisted substring.
     for proc_name in current_processes:
@@ -139,6 +143,43 @@ def scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold
                     print(f"[ALERT] {timestamp}: {name} (PID: {proc.info['pid']}) => kworker high CPU usage: {cpu_usage}%")
                     if connections:
                         print(f"        Connections: {event['connections']}")
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+
+    # Telemetry check: look for processes whose names indicate telemetry
+    for proc in psutil.process_iter(['name', 'pid']):
+        try:
+            name = proc.info['name']
+            if not name:
+                continue
+            lower = name.lower()
+            if any(tk in lower for tk in telemetry_keywords):
+                connections = get_process_connections(proc.info['pid'])
+                if not connections:
+                    continue
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                enc_states = []
+                for conn in connections:
+                    try:
+                        port = int(conn.split(':')[1])
+                        enc_states.append('encrypted' if port in [443, 8443] else 'unencrypted')
+                    except (IndexError, ValueError):
+                        enc_states.append('unknown')
+                state = ','.join(sorted(set(enc_states)))
+                reason = f"Telemetry transmission ({state})"
+                rep_status, rep_details = reputation.get_event_reputation(",".join(connections), global_config)
+                event = {
+                    "timestamp": timestamp,
+                    "process_name": name,
+                    "pid": proc.info['pid'],
+                    "reason": reason,
+                    "connections": ", ".join(connections),
+                    "reputation": rep_status,
+                    "reputation_details": rep_details,
+                }
+                events.append(event)
+                print(f"[ALERT] {timestamp}: {name} (PID: {proc.info['pid']}) => {reason} | Reputation: {rep_status}")
+                print(f"        Connections: {event['connections']}")
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
 

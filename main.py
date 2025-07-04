@@ -1,4 +1,5 @@
 import argparse
+import time
 import config
 
 def init_command():
@@ -45,6 +46,49 @@ def start_command():
     else:
         print("[ERROR] Could not load configuration. Please run 'lucky7 init' first.")
 
+def monitor_command(args):
+    """Continuously runs the monitoring scan at a specified interval."""
+    cfg = config.load_config()
+    if not cfg:
+        print("[ERROR] Could not load configuration. Please run 'lucky7 init' first.")
+        return
+
+    interval = args.interval
+    default_monitoring = config.DEFAULT_CONFIG.get("monitoring", {})
+    suspicious_keywords = cfg.get("monitoring", {}).get(
+        "suspicious_process_keywords",
+        default_monitoring.get("suspicious_process_keywords", [])
+    )
+    process_whitelist = cfg.get("monitoring", {}).get(
+        "process_whitelist",
+        default_monitoring.get("process_whitelist", [])
+    )
+    kworker_cpu_threshold = cfg.get("monitoring", {}).get(
+        "kworker_cpu_threshold",
+        default_monitoring.get("kworker_cpu_threshold", 20)
+    )
+
+    import process_monitor
+    import db
+
+    print(f"[INFO] Starting continuous monitoring (interval: {interval}s)")
+    try:
+        while True:
+            events = process_monitor.scan_processes(
+                suspicious_keywords,
+                process_whitelist,
+                kworker_cpu_threshold,
+            )
+            if events:
+                print(f"[INFO] {len(events)} suspicious event(s) detected.")
+                db.insert_events(events)
+                print("[INFO] Events saved to the database.")
+            else:
+                print("[INFO] No suspicious events logged.")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\n[INFO] Monitoring stopped by user.")
+
 def events_command(args):
     """
     Retrieves and displays stored events from the database with optional filtering.
@@ -67,6 +111,35 @@ def events_command(args):
     else:
         print("[INFO] No events found in the database.")
 
+
+def check_command(args):
+    """Lookup reputation for a given IP, domain, or file."""
+    cfg = config.load_config()
+    if not cfg:
+        print("[ERROR] Could not load configuration. Please run 'lucky7 init' first.")
+        return
+
+    import reputation
+
+    if args.ip:
+        status, details = reputation.get_ip_reputation(args.ip, cfg)
+        print(f"IP {args.ip} => {status} ({details})")
+    elif args.domain:
+        status, details = reputation.get_domain_reputation(args.domain, cfg)
+        print(f"Domain {args.domain} => {status} ({details})")
+    elif args.url:
+        status, details = reputation.get_url_reputation(args.url, cfg)
+        print(f"URL {args.url} => {status} ({details})")
+    elif args.file:
+        import hashlib
+        try:
+            with open(args.file, "rb") as f:
+                sha256 = hashlib.sha256(f.read()).hexdigest()
+            status, details = reputation.get_file_reputation(sha256, cfg, args.file)
+            print(f"File {args.file} => {status} ({details})")
+        except FileNotFoundError:
+            print(f"[ERROR] File not found: {args.file}")
+
 def main():
     parser = argparse.ArgumentParser(
         description="Lucky #7 - On-host Monitoring Tool (MVP)"
@@ -74,12 +147,23 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
     
     subparsers.add_parser("init", help="Initialize configuration and database for Lucky #7")
-    subparsers.add_parser("start", help="Start monitoring and log suspicious events")
+    subparsers.add_parser("start", help="Start monitoring and log suspicious events once")
+
+    monitor_parser = subparsers.add_parser("monitor", help="Continuously monitor at a specified interval")
+    monitor_parser.add_argument("--interval", type=int, default=60,
+                                help="Interval in seconds between scans (default: 60)")
     
     # Define the 'events' command with optional filtering parameters.
     events_parser = subparsers.add_parser("events", help="View stored suspicious events")
     events_parser.add_argument("--limit", type=int, default=100, help="Maximum number of events to display (default: 100)")
     events_parser.add_argument("--process-filter", type=str, default=None, help="Filter events by process name (substring match)")
+
+    check_parser = subparsers.add_parser("check", help="Check reputation for an IP, domain, URL, or file")
+    group = check_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--ip", type=str, help="IP address to lookup")
+    group.add_argument("--domain", type=str, help="Domain to lookup")
+    group.add_argument("--url", type=str, help="URL to lookup")
+    group.add_argument("--file", type=str, help="File path to lookup (SHA256 will be calculated)")
     
     args = parser.parse_args()
     
@@ -87,8 +171,12 @@ def main():
         init_command()
     elif args.command == "start":
         start_command()
+    elif args.command == "monitor":
+        monitor_command(args)
     elif args.command == "events":
         events_command(args)
+    elif args.command == "check":
+        check_command(args)
     else:
         parser.print_help()
 
