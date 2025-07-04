@@ -1,11 +1,12 @@
 import re
 from urllib.parse import urlparse
 from datetime import datetime
+from typing import Dict, Set
 import tldextract
 import whois
 
 # Keywords for heuristics
-BANKING_KEYWORDS = [
+BANKING_KEYWORDS = {
     "bank",
     "banking",
     "paypal",
@@ -19,9 +20,12 @@ BANKING_KEYWORDS = [
     "deposit",
     "capital",
     "investment",
-]
+    "transfer",
+    "wire",
+    "swift",
+}
 
-ENTERTAINMENT_KEYWORDS = [
+ENTERTAINMENT_KEYWORDS = {
     "game",
     "video",
     "music",
@@ -34,9 +38,12 @@ ENTERTAINMENT_KEYWORDS = [
     "comic",
     "casino",
     "bet",
-]
+    "concert",
+    "festival",
+    "radio",
+}
 
-SHOPPING_KEYWORDS = [
+SHOPPING_KEYWORDS = {
     "shop",
     "store",
     "buy",
@@ -48,9 +55,13 @@ SHOPPING_KEYWORDS = [
     "amazon",
     "ebay",
     "retail",
-]
+    "coupon",
+    "goods",
+    "product",
+    "market",
+}
 
-SOCIAL_KEYWORDS = [
+SOCIAL_KEYWORDS = {
     "social",
     "network",
     "chat",
@@ -60,9 +71,12 @@ SOCIAL_KEYWORDS = [
     "instagram",
     "whatsapp",
     "tiktok",
-]
+    "forum",
+    "community",
+    "blog",
+}
 
-NEWS_KEYWORDS = [
+NEWS_KEYWORDS = {
     "news",
     "press",
     "journal",
@@ -70,9 +84,56 @@ NEWS_KEYWORDS = [
     "daily",
     "times",
     "today",
-]
+    "magazine",
+    "headline",
+    "article",
+}
 
-PHISHING_KEYWORDS = [
+EDUCATION_KEYWORDS = {
+    "edu",
+    "school",
+    "college",
+    "university",
+    "academy",
+    "course",
+    "training",
+    "learn",
+    "study",
+}
+
+GOVERNMENT_KEYWORDS = {
+    "gov",
+    "government",
+    "state",
+    "county",
+    "city",
+    "ministry",
+    "dept",
+    "official",
+}
+
+ADULT_KEYWORDS = {
+    "adult",
+    "sex",
+    "porn",
+    "xxx",
+    "erotic",
+    "dating",
+    "escort",
+}
+
+CATEGORY_KEYWORDS: Dict[str, Set[str]] = {
+    "Banking": BANKING_KEYWORDS,
+    "Entertainment": ENTERTAINMENT_KEYWORDS,
+    "Shopping": SHOPPING_KEYWORDS,
+    "Social": SOCIAL_KEYWORDS,
+    "News": NEWS_KEYWORDS,
+    "Education": EDUCATION_KEYWORDS,
+    "Government": GOVERNMENT_KEYWORDS,
+    "Adult": ADULT_KEYWORDS,
+}
+
+PHISHING_KEYWORDS = {
     "login",
     "verify",
     "update",
@@ -86,7 +147,19 @@ PHISHING_KEYWORDS = [
     "invoice",
     "urgent",
     "click",
-]
+    "validate",
+    "authenticate",
+    "credentials",
+}
+
+PHISHING_PATTERN = re.compile("|".join(re.escape(k) for k in PHISHING_KEYWORDS), re.IGNORECASE)
+
+DOMAIN_AGE_CACHE: Dict[str, int] = {}
+
+
+def is_ip_domain(domain: str) -> bool:
+    """Return True if the domain string looks like an IP address."""
+    return re.fullmatch(r"(\d{1,3}\.){3}\d{1,3}", domain) is not None
 SUSPICIOUS_TLDS = {
     "xyz",
     "top",
@@ -95,20 +168,17 @@ SUSPICIOUS_TLDS = {
     "work",
     "gq",
     "loan",
-    "tk",
     "cf",
     "ml",
     "ga",
     "men",
     "win",
-    "biz",
     "zip",
     "ru",
     "su",
     "kim",
     "cn",
     "download",
-    "live",
     "fit",
     "host",
     "icu",
@@ -118,27 +188,29 @@ SUSPICIOUS_TLDS = {
     "monster",
     "buzz",
     "support",
+    "country",
+    "bar",
+    "live",
+    "life",
+    "biz",
+    "link",
+    "rest",
 }
 
 
 def infer_intention(domain: str) -> str:
     """Infer the website's intention based on domain keywords."""
     lower = domain.lower()
-    if any(k in lower for k in BANKING_KEYWORDS):
-        return "Banking"
-    if any(k in lower for k in ENTERTAINMENT_KEYWORDS):
-        return "Entertainment"
-    if any(k in lower for k in SHOPPING_KEYWORDS):
-        return "Shopping"
-    if any(k in lower for k in SOCIAL_KEYWORDS):
-        return "Social"
-    if any(k in lower for k in NEWS_KEYWORDS):
-        return "News"
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if any(kw in lower for kw in keywords):
+            return category
     return "General"
 
 
 def get_domain_age(domain: str) -> int:
-    """Return domain age in days or -1 if unknown."""
+    """Return domain age in days or -1 if unknown. Results are cached."""
+    if domain in DOMAIN_AGE_CACHE:
+        return DOMAIN_AGE_CACHE[domain]
     try:
         w = whois.whois(domain)
         creation_date = w.creation_date
@@ -146,9 +218,12 @@ def get_domain_age(domain: str) -> int:
             creation_date = creation_date[0]
         if isinstance(creation_date, datetime):
             delta = datetime.utcnow() - creation_date
-            return delta.days
+            age = delta.days
+            DOMAIN_AGE_CACHE[domain] = age
+            return age
     except Exception:
         pass
+    DOMAIN_AGE_CACHE[domain] = -1
     return -1
 
 
@@ -181,11 +256,25 @@ def score_website(url: str):
 
     # Phishing keywords in domain or subdomain
     domain_str = f"{subdomain}.{domain}" if subdomain else domain
-    if any(k in domain_str.lower() for k in PHISHING_KEYWORDS):
+    if PHISHING_PATTERN.search(domain_str):
         score += 30
         features["keywords"] = "suspicious"
     else:
         features["keywords"] = "none"
+
+    # Domain is an IP address
+    if is_ip_domain(domain):
+        score += 30
+        features["ip_domain"] = "yes"
+    else:
+        features["ip_domain"] = "no"
+
+    # Repeated characters (e.g., xxxyy)
+    if re.search(r"(.)\1{2,}", domain_str):
+        score += 5
+        features["repeated_chars"] = "yes"
+    else:
+        features["repeated_chars"] = "no"
 
     # Hyphen or numeric characters in domain
     if re.search(r"[-\d]", domain_str):
