@@ -67,6 +67,18 @@ def events_command(args):
     else:
         print("[INFO] No events found in the database.")
 
+def score_command(args):
+    """Scores a website for phishing or scamming potential."""
+    url = args.url
+    import phishing
+    result = phishing.score_website(url)
+    print(f"URL: {result['url']}")
+    print(f"Inferred Intention: {result['intention']}")
+    for k, v in result['features'].items():
+        print(f"{k}: {v}")
+    print(f"Score: {result['score']}")
+    print(f"Verdict: {result['verdict']}")
+
 def main():
     parser = argparse.ArgumentParser(
         description="Lucky #7 - On-host Monitoring Tool (MVP)"
@@ -80,6 +92,10 @@ def main():
     events_parser = subparsers.add_parser("events", help="View stored suspicious events")
     events_parser.add_argument("--limit", type=int, default=100, help="Maximum number of events to display (default: 100)")
     events_parser.add_argument("--process-filter", type=str, default=None, help="Filter events by process name (substring match)")
+
+    # Command to score a website for phishing risk
+    score_parser = subparsers.add_parser("score", help="Score a website for phishing risk")
+    score_parser.add_argument("url", help="URL to evaluate")
     
     args = parser.parse_args()
     
@@ -89,6 +105,8 @@ def main():
         start_command()
     elif args.command == "events":
         events_command(args)
+    elif args.command == "score":
+        score_command(args)
     else:
         parser.print_help()
 
