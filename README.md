@@ -38,3 +38,9 @@ Display stored events:
 python main.py events
 ```
 
+
+Network scan all adapters for active devices and open ports:
+
+```bash
+python main.py network-scan
+```

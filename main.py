@@ -72,9 +72,11 @@ def main():
         description="Lucky #7 - On-host Monitoring Tool (MVP)"
     )
     subparsers = parser.add_subparsers(dest="command")
-    
+
     subparsers.add_parser("init", help="Initialize configuration and database for Lucky #7")
     subparsers.add_parser("start", help="Start monitoring and log suspicious events")
+
+    subparsers.add_parser("network-scan", help="Scan local network for visible devices and open ports")
     
     # Define the 'events' command with optional filtering parameters.
     events_parser = subparsers.add_parser("events", help="View stored suspicious events")
@@ -89,6 +91,14 @@ def main():
         start_command()
     elif args.command == "events":
         events_command(args)
+    elif args.command == "network-scan":
+        import network_scan
+        results = network_scan.scan_network()
+        if results:
+            for dev in results:
+                print(f"{dev['ip']} ({dev['interface']}) -> open ports: {dev['ports']}")
+        else:
+            print("[INFO] No devices with open common ports detected.")
     else:
         parser.print_help()
 
