@@ -6,13 +6,13 @@ from config import CONFIG_DIR
 DB_PATH = os.path.join(CONFIG_DIR, "lucky7.db")
 
 def init_db():
-    """
-    Initializes the SQLite database and creates the 'events' table if it doesn't exist.
-    Now includes a 'connections' column to store remote IP info.
-    """
+    """Initializes the SQLite database and tables."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("""
+
+    # Table for process events
+    c.execute(
+        """
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT,
@@ -23,7 +23,23 @@ def init_db():
             reputation TEXT,
             reputation_details TEXT
         )
-    """)
+        """
+    )
+
+    # Table for storing reputation lookup history
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS reputation_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            entity TEXT,
+            entity_type TEXT,
+            status TEXT,
+            details TEXT
+        )
+        """
+    )
+
     conn.commit()
     conn.close()
     print("[INFO] Database initialized at:", DB_PATH)
@@ -122,4 +138,72 @@ def fetch_events(limit=100, process_name_filter=None):
         }
         events.append(event)
     return events
+
+
+def insert_reputation_history(entity, entity_type, status, details):
+    """Stores a reputation lookup result."""
+    from datetime import datetime
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        """
+        INSERT INTO reputation_history (timestamp, entity, entity_type, status, details)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            entity,
+            entity_type,
+            status,
+            details,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def purge_old_history(days):
+    """Deletes reputation history older than the specified number of days."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        """
+        DELETE FROM reputation_history
+        WHERE julianday('now') - julianday(timestamp) > ?
+        """,
+        (days,),
+    )
+    conn.commit()
+    conn.close()
+
+
+def fetch_reputation_history(limit=100):
+    """Fetches recent reputation lookups."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT id, timestamp, entity, entity_type, status, details
+        FROM reputation_history
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+    rows = c.fetchall()
+    conn.close()
+    history = []
+    for row in rows:
+        history.append(
+            {
+                "id": row[0],
+                "timestamp": row[1],
+                "entity": row[2],
+                "entity_type": row[3],
+                "status": row[4],
+                "details": row[5],
+            }
+        )
+    return history
 

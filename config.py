@@ -15,7 +15,9 @@ DEFAULT_CONFIG = {
         #Processes that should normally be ignored.
         "process_whitelist": ["systemd","init","bash","python","gnome-shell","Xorg","kworker"],
         #New: CPU usage threshold ( in percent) above which a kworker process is flagged
-        "kworker_cpu_threshold": 20
+        "kworker_cpu_threshold": 20,
+        # Keywords indicating telemetry related processes
+        "telemetry_keywords": ["telemetry", "metrics", "analytics", "report", "tracking"],
     },
     "database": {
         "path": os.path.join(CONFIG_DIR, "lucky7.db")
@@ -24,12 +26,22 @@ DEFAULT_CONFIG = {
         "level": "INFO"
     },
     "reputation": {
-        "api_key": "", # If provided, VirusTotal will be used.
+        "api_key": "",       # VirusTotal API key
+        "otx_api_key": "",   # AlienVault OTX API key
+        "ipinfo_token": "",  # Optional ipinfo.io token for IP reputation
+        "abuseipdb_key": "", # Optional AbuseIPDB API key
 
-        # Either "virustotal" (if key provided) or fallback "geofencing".
+        # Method to use for lookups: 'virustotal', 'otx', 'abuseipdb',
+        # 'geofencing', or 'heuristic' (simple scoring based on IP location).
         "method": "geofencing",
+
         # For geofencing: trusted if IP is located in this country.
-        "geofence_country": "United States"
+        "geofence_country": "United States",
+
+        # Retain reputation history for this many days
+        "history_retention_days": 30,
+        # Flag images larger than this many MB when checking URLs
+        "large_image_threshold_mb": 100
     }
 }
 
