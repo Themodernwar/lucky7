@@ -17,8 +17,9 @@ def map_score_to_state(score: int) -> str:
     return "Unknown"
 
 
-def store_history(entity, entity_type, status, details, config):
-    retention = config.get("history_retention_days", 30)
+def store_history(entity, entity_type, status, details, rep_config):
+    """Persist a lookup result and purge history based on retention settings."""
+    retention = rep_config.get("history_retention_days", 30)
     db.insert_reputation_history(entity, entity_type, status, details)
     db.purge_old_history(retention)
 
