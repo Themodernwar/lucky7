@@ -73,6 +73,10 @@ def events_command(args):
                 print("    Connections: None")
             # Show reputation details regardless of connection presence
             print(f"    Reputation: {event['reputation']} ({event['reputation_details']})")
+            if event.get('banner'):
+                print(f"    Banner: {event['banner']}")
+            if event.get('purpose'):
+                print(f"    Purpose: {event['purpose']}")
     else:
         print("[INFO] No events found in the database.")
 

@@ -2,12 +2,51 @@ import os
 import json
 from datetime import datetime
 import psutil
+import socket
 from config import CONFIG_DIR
 import reputation
 import config as cfg_module
 
 # Baseline file for known network connections
 BASELINE_FILE = os.path.join(CONFIG_DIR, "network_baseline.json")
+
+
+def get_remote_banner(ip, port, timeout=2):
+    """Return a short banner or header string for the remote service."""
+    try:
+        with socket.create_connection((ip, int(port)), timeout=timeout) as sock:
+            sock.settimeout(timeout)
+            # Send a simple HTTP HEAD request if it looks like a web port
+            if str(port) in {"80", "8080", "443"}:
+                try:
+                    sock.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
+                except Exception:
+                    pass
+            try:
+                data = sock.recv(256)
+                return data.decode(errors="ignore").strip()
+            except Exception:
+                return ""
+    except Exception:
+        return ""
+
+
+def infer_purpose(banner):
+    """Guess the remote service purpose from its banner."""
+    if not banner:
+        return "Unknown"
+    b = banner.lower()
+    if "ssh" in b:
+        return "SSH Server"
+    if "smtp" in b:
+        return "Mail Server"
+    if "ftp" in b:
+        return "FTP Server"
+    if "mysql" in b or "postgres" in b:
+        return "Database Server"
+    if "http" in b or "server:" in b or "html" in b:
+        return "Web Server"
+    return "Unknown"
 
 
 def load_baseline():
@@ -65,8 +104,10 @@ def scan_network():
     new_conns = current_conns - baseline
     for conn in new_conns:
         details = conn_details.get(conn, [])
-        ip = conn.split(":")[0]
+        ip, port = conn.split(":")
         rep_status, rep_details = reputation.get_ip_reputation(ip, global_config)
+        banner = get_remote_banner(ip, port)
+        purpose = infer_purpose(banner)
         for d in details:
             event = {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -76,10 +117,12 @@ def scan_network():
                 "connections": conn,
                 "reputation": rep_status,
                 "reputation_details": rep_details,
+                "banner": banner,
+                "purpose": purpose,
             }
             events.append(event)
             print(
-                f"[ALERT] {event['timestamp']}: {event['process_name']} (PID: {event['pid']}) => {event['reason']} | Reputation: {rep_status}"
+                f"[ALERT] {event['timestamp']}: {event['process_name']} (PID: {event['pid']}) => {event['reason']} | Reputation: {rep_status} | Purpose: {purpose}"
             )
 
     if events:
