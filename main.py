@@ -34,7 +34,16 @@ def start_command():
         )
         
         import process_monitor
-        events = process_monitor.scan_processes(suspicious_keywords, process_whitelist, kworker_cpu_threshold)
+        events = process_monitor.scan_processes(
+            suspicious_keywords, process_whitelist, kworker_cpu_threshold
+        )
+
+        if cfg.get("monitoring", {}).get("network", False):
+            import network_scan
+
+            net_events = network_scan.scan_network()
+            events.extend(net_events)
+
         if events:
             print(f"[INFO] {len(events)} suspicious event(s) detected.")
             import db

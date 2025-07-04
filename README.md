@@ -9,6 +9,8 @@ python main.py start -- Loads the Configuration Files & Begins Monitoring
 python main.py events -- Displays the last 7 Security/Network events
 
 Simple tool meant to ensure there are no active network connections associated with a process.
+If network monitoring is enabled in `~/.lucky7/config.yml` (set `monitoring.network` to `true`),
+new outbound connections are checked against an IP reputation service.
 
 ## Installation
 
