@@ -112,6 +112,19 @@ def events_command(args):
         print("[INFO] No events found in the database.")
 
 
+def score_command(args):
+    """Scores a website for phishing or scamming potential."""
+    url = args.url
+    import phishing
+    result = phishing.score_website(url)
+    print(f"URL: {result['url']}")
+    print(f"Inferred Intention: {result['intention']}")
+    for k, v in result['features'].items():
+        print(f"{k}: {v}")
+    print(f"Score: {result['score']}")
+    print(f"Verdict: {result['verdict']}")
+
+
 def check_command(args):
     """Lookup reputation for a given IP, domain, or file."""
     cfg = config.load_config()
@@ -158,6 +171,9 @@ def main():
     events_parser.add_argument("--limit", type=int, default=100, help="Maximum number of events to display (default: 100)")
     events_parser.add_argument("--process-filter", type=str, default=None, help="Filter events by process name (substring match)")
 
+    score_parser = subparsers.add_parser("score", help="Score a website for phishing risk")
+    score_parser.add_argument("url", help="URL to evaluate")
+
     check_parser = subparsers.add_parser("check", help="Check reputation for an IP, domain, URL, or file")
     group = check_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ip", type=str, help="IP address to lookup")
@@ -175,6 +191,8 @@ def main():
         monitor_command(args)
     elif args.command == "events":
         events_command(args)
+    elif args.command == "score":
+        score_command(args)
     elif args.command == "check":
         check_command(args)
     else:
