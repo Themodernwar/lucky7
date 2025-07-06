@@ -3,3 +3,5 @@ requests
 pyyaml
 tldextract
 python-whois
+Flask
+ipwhois
