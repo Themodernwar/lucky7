@@ -1,6 +1,6 @@
 # lucky7 | Lightweight on-host monitoring tool
 ---------
-lightweight on-host monitoring tool that tracks suspicious local activity
+a lightweight on-host monitoring tool that tracks suspicious local activity
 
 > **Disclaimer**: Lucky7 is intended for authorized training and defensive simulation only. Do not use it for malicious purposes.
 __________________________________________________________________________
@@ -93,7 +93,7 @@ python main.py enrich --ip 8.8.8.8
 ### Configuration
 
 The `~/.lucky7/config.yml` file contains reputation settings. You can provide
-API keys for VirusTotal or AlienVault OTX and adjust how long reputation history
+API keys for VirusTotal or AlienVault OTX, and adjust how long the reputation history
 is stored:
 
 ```yaml
