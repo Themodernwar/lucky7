@@ -151,6 +151,29 @@ def check_command(args):
         except FileNotFoundError:
             print(f"[ERROR] File not found: {args.file}")
 
+def serve_command(args):
+    """Run the training web server."""
+    import webapp
+    webapp.app.run(host='0.0.0.0', port=args.port)
+
+
+def simulate_command(args):
+    """Run an attack simulation scenario."""
+    import automation
+    automation.run_scenario(args.file)
+
+
+def enrich_command(args):
+    """Perform passive enrichment for an IP or domain."""
+    cfg = config.load_config() or {}
+    import enrichment
+    if args.ip:
+        info = enrichment.enrich_ip(args.ip, cfg)
+    else:
+        info = enrichment.enrich_domain(args.domain, cfg)
+    import json
+    print(json.dumps(info, indent=2))
+
 def main():
     parser = argparse.ArgumentParser(
         description="Lucky #7 - On-host Monitoring Tool (MVP)"
@@ -177,6 +200,17 @@ def main():
     # Command to score a website for phishing risk
     score_parser = subparsers.add_parser("score", help="Score a website for phishing risk")
     score_parser.add_argument("url", help="URL to evaluate")
+
+    serve_parser = subparsers.add_parser("serve", help="Run training web server")
+    serve_parser.add_argument("--port", type=int, default=5000, help="Port to bind (default 5000)")
+
+    sim_parser = subparsers.add_parser("simulate", help="Run attack simulation scenario")
+    sim_parser.add_argument("file", help="YAML scenario file")
+
+    enrich_parser = subparsers.add_parser("enrich", help="Passive enrichment for an IP or domain")
+    eg = enrich_parser.add_mutually_exclusive_group(required=True)
+    eg.add_argument("--ip", help="IP address to enrich")
+    eg.add_argument("--domain", help="Domain to enrich")
     
     args = parser.parse_args()
     
@@ -192,6 +226,12 @@ def main():
         score_command(args)
     elif args.command == "check":
         check_command(args)
+    elif args.command == "serve":
+        serve_command(args)
+    elif args.command == "simulate":
+        simulate_command(args)
+    elif args.command == "enrich":
+        enrich_command(args)
     else:
         parser.print_help()
 

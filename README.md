@@ -1,6 +1,8 @@
 # lucky7 | Lightweight on-host monitoring tool
 ---------
 lightweight on-host monitoring tool that tracks suspicious local activity
+
+> **Disclaimer**: Lucky7 is intended for authorized training and defensive simulation only. Do not use it for malicious purposes.
 __________________________________________________________________________
 python main.py init -- Generates Required Configuration Files
 
@@ -63,6 +65,31 @@ python main.py check --url https://example.com/big.jpg
     python main.py check --file /path/to/file.exe
 ```
 
+## Training server
+
+These routes simulate attacker behavior for defensive research. Data such as browser fingerprints and login attempts are stored for analysis.
+
+Start the web server with honeypot routes and fingerprint collection:
+
+```bash
+python main.py serve --port 5000
+```
+
+Run a YAML simulation scenario:
+
+```bash
+python main.py simulate scenario.yml
+```
+
+Reverse shell training (listener or client) can also be defined in scenarios.
+
+Perform passive enrichment for a domain or IP:
+
+```bash
+python main.py enrich --domain example.com
+python main.py enrich --ip 8.8.8.8
+```
+
 ### Configuration
 
 The `~/.lucky7/config.yml` file contains reputation settings. You can provide
@@ -90,3 +117,5 @@ Heuristic lookups consider multiple factors:
 
 * URL checks flag unencrypted links and images larger than the configured threshold.
 * Processes named like telemetry or analytics with outbound traffic are logged with encryption status.
+
+Lucky7 is provided for educational use. Use it only in environments you own or have explicit permission to test.

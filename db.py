@@ -9,7 +9,7 @@ def init_db():
     """Initializes the SQLite database and tables."""
     # Ensure the configuration directory exists so SQLite can create the file
     if not os.path.exists(CONFIG_DIR):
-    os.makedirs(CONFIG_DIR, exist_ok=True)
+        os.makedirs(CONFIG_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
@@ -39,6 +39,39 @@ def init_db():
             entity_type TEXT,
             status TEXT,
             details TEXT
+        )
+        """
+    )
+
+    # Table for client fingerprint data
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS fingerprints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            ip TEXT,
+            user_agent TEXT,
+            screen TEXT,
+            timezone TEXT,
+            platform TEXT,
+            webgl_hash TEXT,
+            canvas_hash TEXT,
+            fp_hash TEXT
+        )
+        """
+    )
+
+    # Table for honeypot interactions
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS honeypot_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            ip TEXT,
+            endpoint TEXT,
+            method TEXT,
+            headers TEXT,
+            data TEXT
         )
         """
     )
@@ -209,4 +242,105 @@ def fetch_reputation_history(limit=100):
             }
         )
     return history
+
+
+def insert_fingerprint(data):
+    """Store a client fingerprint entry."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        """
+        INSERT INTO fingerprints (
+            timestamp, ip, user_agent, screen, timezone, platform, webgl_hash, canvas_hash, fp_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            data.get("timestamp"),
+            data.get("ip"),
+            data.get("user_agent"),
+            data.get("screen"),
+            data.get("timezone"),
+            data.get("platform"),
+            data.get("webgl_hash"),
+            data.get("canvas_hash"),
+            data.get("fp_hash"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def insert_honeypot_event(data):
+    """Store a honeypot interaction."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        """
+        INSERT INTO honeypot_events (
+            timestamp, ip, endpoint, method, headers, data
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            data.get("timestamp"),
+            data.get("ip"),
+            data.get("endpoint"),
+            data.get("method"),
+            data.get("headers"),
+            data.get("data"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def count_fingerprints(ip):
+    """Return number of fingerprints from a given IP."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT COUNT(*) FROM fingerprints WHERE ip = ?",
+        (ip,),
+    )
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+
+def count_honeypot_events(ip):
+    """Return number of honeypot events from an IP."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT COUNT(*) FROM honeypot_events WHERE ip = ?",
+        (ip,),
+    )
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_fingerprint_hashes(ip):
+    """Return list of fingerprint hashes recorded for an IP."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT fp_hash FROM fingerprints WHERE ip = ?",
+        (ip,),
+    )
+    hashes = [row[0] for row in c.fetchall() if row[0]]
+    conn.close()
+    return hashes
+
+
+def count_fingerprint_hash(fp_hash):
+    """Return total occurrences of a fingerprint hash."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT COUNT(*) FROM fingerprints WHERE fp_hash = ?",
+        (fp_hash,),
+    )
+    count = c.fetchone()[0]
+    conn.close()
+    return count
 
