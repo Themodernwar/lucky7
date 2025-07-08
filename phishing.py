@@ -150,6 +150,8 @@ PHISHING_KEYWORDS = {
     "validate",
     "authenticate",
     "credentials",
+    "bank",
+    "trust",
 }
 
 PHISHING_PATTERN = re.compile("|".join(re.escape(k) for k in PHISHING_KEYWORDS), re.IGNORECASE)
@@ -228,6 +230,8 @@ def get_domain_age(domain: str) -> int:
 
 
 def score_website(url: str):
+    if "://" not in url:
+        url = "https://" + url
     parsed = urlparse(url)
     https = parsed.scheme.lower() == "https"
     extracted = tldextract.extract(url)
@@ -249,7 +253,7 @@ def score_website(url: str):
     # Suspicious TLD
     tld = extracted.suffix.lower()
     if tld in SUSPICIOUS_TLDS:
-        score += 25
+        score += 30
         features["tld"] = f"{tld} (suspicious)"
     else:
         features["tld"] = tld
@@ -257,41 +261,41 @@ def score_website(url: str):
     # Phishing keywords in domain or subdomain
     domain_str = f"{subdomain}.{domain}" if subdomain else domain
     if PHISHING_PATTERN.search(domain_str):
-        score += 30
+        score += 40
         features["keywords"] = "suspicious"
     else:
         features["keywords"] = "none"
 
     # Domain is an IP address
     if is_ip_domain(domain):
-        score += 30
+        score += 40
         features["ip_domain"] = "yes"
     else:
         features["ip_domain"] = "no"
 
     # Repeated characters (e.g., xxxyy)
     if re.search(r"(.)\1{2,}", domain_str):
-        score += 5
+        score += 10
         features["repeated_chars"] = "yes"
     else:
         features["repeated_chars"] = "no"
 
     # Hyphen or numeric characters in domain
     if re.search(r"[-\d]", domain_str):
-        score += 10
+        score += 5
         features["hyphen_or_number"] = "yes"
     else:
         features["hyphen_or_number"] = "no"
 
     # Long or punycode domain
     if domain_str.startswith("xn--"):
-        score += 20
+        score += 25
         features["punycode"] = "yes"
     else:
         features["punycode"] = "no"
 
     if len(domain_str) > 25:
-        score += 5
+        score += 10
         features["domain_length"] = f"{len(domain_str)} (long)"
     else:
         features["domain_length"] = len(domain_str)
@@ -300,23 +304,34 @@ def score_website(url: str):
     sub_depth = len(subdomain.split(".")) if subdomain else 0
     features["subdomain_depth"] = sub_depth
     if sub_depth > 1:
-        score += 5
+        score += 10
 
     # Domain age
     age_days = get_domain_age(domain)
     if age_days >= 0:
         features["domain_age_days"] = age_days
         if age_days < 180:
+            score += 40
+        elif age_days < 365:
             score += 20
+        elif age_days > 1825:
+            score -= 10
     else:
         features["domain_age_days"] = "unknown"
-        score += 5  # Slight penalty for unknown age
+        score += 10  # penalty for unknown age
+        if intention == "Banking":
+            score += 30
+            features["unknown_bank_domain"] = "yes"
 
-    verdict = "Low"
-    if score >= 70:
-        verdict = "High"
-    elif score >= 40:
-        verdict = "Medium"
+    if intention == "Banking" and age_days > 0 and age_days < 1825:
+        score += 40
+        features["young_bank_domain"] = "yes"
+
+    verdict = "Low Risk"
+    if score >= 80:
+        verdict = "High Risk"
+    elif score >= 50:
+        verdict = "Medium Risk"
 
     return {
         "url": url,
