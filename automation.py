@@ -6,8 +6,15 @@ import reverse_shell
 
 def run_scenario(path: str):
     """Execute a YAML scenario of simulated attacks."""
-    with open(path, 'r') as f:
-        scenario = yaml.safe_load(f) or {}
+    try:
+        with open(path, 'r') as f:
+            scenario = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        print(f"[ERROR] Scenario file not found: {path}")
+        return
+    except yaml.YAMLError as e:
+        print(f"[ERROR] Failed to parse scenario file {path}: {e}")
+        return
 
     for step in scenario.get('steps', []):
         action = step.get('action')

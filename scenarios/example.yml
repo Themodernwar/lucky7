@@ -1,0 +1,7 @@
+steps:
+  - action: http_get
+    url: http://example.com
+  - action: delay
+    seconds: 2
+
+
