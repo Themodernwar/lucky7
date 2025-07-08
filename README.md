@@ -76,10 +76,10 @@ Start the web server with honeypot routes and fingerprint collection:
 python main.py serve --port 5000
 ```
 
-Run a YAML simulation scenario:
+Run a YAML simulation scenario. Provide the path to your YAML file. An example is included in `scenarios/example.yml`:
 
 ```bash
-python main.py simulate scenario.yml
+python main.py simulate scenarios/example.yml
 ```
 
 Reverse shell training (listener or client) can also be defined in scenarios.

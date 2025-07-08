@@ -1,0 +1,26 @@
+# Example simulation scenario illustrating multiple actions
+steps:
+  - action: http_get
+    url: https://example.com
+  - action: delay
+    seconds: 1
+  - action: http_post
+    url: https://httpbin.org/post
+    data:
+      username: tester
+      password: secret
+  - action: reverse_shell
+    mode: listener
+    port: 9001
+  - action: reverse_shell
+    mode: client
+    host: 127.0.0.1
+    port: 9001
+    commands:
+      - whoami
+      - id
+      - exit
+  - action: delay
+    seconds: 1
+  - action: http_get
+    url: https://example.com/robots.txt
