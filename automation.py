@@ -23,21 +23,30 @@ def run_scenario(path: str):
         elif action == 'http_get':
             url = step.get('url')
             if url:
-                requests.get(url)
+                try:
+                    requests.get(url, timeout=10)
+                except requests.RequestException as e:
+                    print(f"[SIM] HTTP GET failed for {url}: {e}")
         elif action == 'http_post':
             url = step.get('url')
             data = step.get('data', {})
             if url:
-                requests.post(url, data=data)
+                try:
+                    requests.post(url, data=data, timeout=10)
+                except requests.RequestException as e:
+                    print(f"[SIM] HTTP POST failed for {url}: {e}")
         elif action == 'reverse_shell':
             mode = step.get('mode', 'client')
             host = step.get('host', '127.0.0.1')
             port = int(step.get('port', 9001))
-            if mode == 'listener':
-                reverse_shell.start_listener(port)
-            else:
-                commands = step.get('commands', [])
-                reverse_shell.simulate_client(host, port, commands)
+            try:
+                if mode == 'listener':
+                    reverse_shell.start_listener(port)
+                else:
+                    commands = step.get('commands', [])
+                    reverse_shell.simulate_client(host, port, commands)
+            except Exception as e:
+                print(f"[SIM] Reverse shell error: {e}")
         else:
             print(f"[SIM] Unknown action: {action}")
 
