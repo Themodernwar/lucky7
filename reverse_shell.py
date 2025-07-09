@@ -1,6 +1,5 @@
 from __future__ import annotations
 import socket
-from datetime import datetime
 from typing import Iterable
 import time
 
@@ -34,7 +33,12 @@ def start_listener(port: int = 9001, timeout: int = 30) -> None:
         print("[SIM] Connection closed")
 
 
-def simulate_client(host: str, port: int, commands: Iterable[str], delay: float = 0.5) -> None:
+def simulate_client(
+    host: str,
+    port: int,
+    commands: Iterable[str],
+    delay: float = 0.5,
+) -> None:
     """Connect to a listener and send commands for simulation."""
     with socket.create_connection((host, port), timeout=10) as s:
         for cmd in commands:
@@ -42,8 +46,8 @@ def simulate_client(host: str, port: int, commands: Iterable[str], delay: float 
             s.sendall(cmd.encode() + b"\n")
             try:
                 resp = s.recv(1024)
-                print(f"[SIM] Response: {resp.decode(errors='ignore').strip()}")
+                resp_text = resp.decode(errors="ignore").strip()
+                print(f"[SIM] Response: {resp_text}")
             except socket.timeout:
                 print("[SIM] No response")
             time.sleep(delay)
-

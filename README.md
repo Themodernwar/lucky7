@@ -106,6 +106,14 @@ reputation:
   method: virustotal  # or 'otx', 'abuseipdb', 'geofencing', 'heuristic'
   history_retention_days: 30
   large_image_threshold_mb: 100
+
+monitoring:
+  telemetry_keywords:
+    - telemetry
+    - metrics
+    - analytics
+    - report
+    - tracking
 ```
 
 Heuristic lookups consider multiple factors:

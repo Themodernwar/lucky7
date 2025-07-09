@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request
 from datetime import datetime
 import json
 import db
@@ -23,8 +23,13 @@ INDEX_HTML = """
 FINGERPRINT_JS = """
 (async function(){
     async function sha256(str){
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-        return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        const buf = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(str)
+        );
+        return Array.from(new Uint8Array(buf))
+            .map(b=>b.toString(16).padStart(2,'0'))
+            .join('');
     }
     function canvasHash(){
         try{
@@ -38,7 +43,8 @@ FINGERPRINT_JS = """
     }
     function webglHash(){
         var canvas=document.createElement('canvas');
-        var gl=canvas.getContext('webgl')||canvas.getContext('experimental-webgl');
+        var gl=canvas.getContext('webgl') ||
+            canvas.getContext('experimental-webgl');
         if(!gl) return 'nowebgl';
         var debug=gl.getExtension('WEBGL_debug_renderer_info');
         var vendor=debug?gl.getParameter(debug.UNMASKED_VENDOR_WEBGL):'';
@@ -61,17 +67,24 @@ FINGERPRINT_JS = """
         canvas_hash:ch,
         fp_hash:fp
     };
-    fetch('/collect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    fetch('/collect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
 })();
 """
+
 
 @app.route('/')
 def index():
     return INDEX_HTML
 
+
 @app.route('/fp.js')
 def fp_js():
-    return FINGERPRINT_JS, 200, {'Content-Type':'application/javascript'}
+    return FINGERPRINT_JS, 200, {'Content-Type': 'application/javascript'}
+
 
 @app.route('/collect', methods=['POST'])
 def collect():
@@ -81,6 +94,7 @@ def collect():
     db.insert_fingerprint(data)
     return 'ok'
 
+
 LOGIN_HTML = """
 <form method='POST'>
     <input name='username' placeholder='Username'>
@@ -89,7 +103,8 @@ LOGIN_HTML = """
 </form>
 """
 
-@app.route('/honeypot/login', methods=['GET','POST'])
+
+@app.route('/honeypot/login', methods=['GET', 'POST'])
 def honeypot_login():
     if request.method == 'POST':
         db.insert_honeypot_event({
@@ -102,6 +117,7 @@ def honeypot_login():
         })
         return 'Invalid credentials', 401
     return LOGIN_HTML
+
 
 @app.route('/download/fake')
 def fake_download():
@@ -116,7 +132,14 @@ def fake_download():
     return 'File not available', 404
 
 
-BAD_ASN_KEYWORDS = ["amazon", "digitalocean", "ovh", "google", "microsoft", "cloud"]
+BAD_ASN_KEYWORDS = [
+    "amazon",
+    "digitalocean",
+    "ovh",
+    "google",
+    "microsoft",
+    "cloud",
+]
 
 
 def score_client(ip: str) -> int:
@@ -137,14 +160,15 @@ def score_client(ip: str) -> int:
         asn = info.get("org", "").lower()
         if any(k in asn for k in BAD_ASN_KEYWORDS):
             score += 20
-
     return score
+
 
 @app.route('/score')
 def score_endpoint():
     ip = request.args.get('ip', request.remote_addr)
     score = score_client(ip)
     return {'ip': ip, 'score': score}
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
