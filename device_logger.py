@@ -1,7 +1,14 @@
 import socket
 import platform
 import uuid
-import wmi
+import logging
+
+try:
+    import wmi  # type: ignore
+except ImportError:  # Non-Windows systems
+    wmi = None
+
+logger = logging.getLogger(__name__)
 
 
 def get_beacon_info():
@@ -16,9 +23,13 @@ def get_beacon_info():
 
 
 def collect_devices():
-    """Enumerate connected devices via WMI."""
-    print("[*] Enumerating connected devices...\n")
+    """Enumerate connected devices via WMI if available."""
+    logger.info("Enumerating connected devices...")
     devices = []
+    if wmi is None:
+        logger.warning("WMI module not available; skipping device enumeration")
+        return devices
+
     c = wmi.WMI()
 
     for device in c.Win32_PnPEntity():
@@ -29,23 +40,27 @@ def collect_devices():
             "manufacturer": device.Manufacturer
         }
         devices.append(device_info)
-        
-        print(f"- Name: {device_info['name']}")
-        print(f"  Device ID: {device_info['device_id']}")
-        print(f"  Status: {device_info['status']}")
-        print(f"  Manufacturer: {device_info['manufacturer']}\n")
+
+        logger.info(
+            "- Name: %s\n  Device ID: %s\n  Status: %s\n  Manufacturer: %s",
+            device_info["name"],
+            device_info["device_id"],
+            device_info["status"],
+            device_info["manufacturer"],
+        )
 
     if not devices:
-        print("[-] No devices found or insufficient permissions.")
+        logger.info("No devices found or insufficient permissions")
 
     return devices
 
 
 if __name__ == "__main__":
-    print("[+] Collecting beacon information:\n")
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Collecting beacon information...")
     beacon_info = get_beacon_info()
     for key, value in beacon_info.items():
-        print(f"{key.capitalize()}: {value}")
+        logger.info("%s: %s", key.capitalize(), value)
 
-    print("\n[+] Device Enumeration:\n")
+    logger.info("Device Enumeration:")
     collect_devices()

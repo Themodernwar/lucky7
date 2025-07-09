@@ -1,7 +1,10 @@
 import yaml
 import time
 import requests
+import logging
 import reverse_shell
+
+logger = logging.getLogger(__name__)
 
 
 def run_scenario(path: str):
@@ -10,10 +13,10 @@ def run_scenario(path: str):
         with open(path, 'r') as f:
             scenario = yaml.safe_load(f) or {}
     except FileNotFoundError:
-        print(f"[ERROR] Scenario file not found: {path}")
+        logger.error("Scenario file not found: %s", path)
         return
     except yaml.YAMLError as e:
-        print(f"[ERROR] Failed to parse scenario file {path}: {e}")
+        logger.error("Failed to parse scenario file %s: %s", path, e)
         return
 
     for step in scenario.get('steps', []):
@@ -26,7 +29,7 @@ def run_scenario(path: str):
                 try:
                     requests.get(url, timeout=10)
                 except requests.RequestException as e:
-                    print(f"[SIM] HTTP GET failed for {url}: {e}")
+                    logger.warning("HTTP GET failed for %s: %s", url, e)
         elif action == 'http_post':
             url = step.get('url')
             data = step.get('data', {})
@@ -34,7 +37,7 @@ def run_scenario(path: str):
                 try:
                     requests.post(url, data=data, timeout=10)
                 except requests.RequestException as e:
-                    print(f"[SIM] HTTP POST failed for {url}: {e}")
+                    logger.warning("HTTP POST failed for %s: %s", url, e)
         elif action == 'reverse_shell':
             mode = step.get('mode', 'client')
             host = step.get('host', '127.0.0.1')
@@ -46,7 +49,6 @@ def run_scenario(path: str):
                     commands = step.get('commands', [])
                     reverse_shell.simulate_client(host, port, commands)
             except Exception as e:
-                print(f"[SIM] Reverse shell error: {e}")
+                logger.warning("Reverse shell error: %s", e)
         else:
-            print(f"[SIM] Unknown action: {action}")
-
+            logger.warning("Unknown action: %s", action)
