@@ -24,7 +24,9 @@ def init_db():
             reason TEXT,
             connections TEXT,
             reputation TEXT,
-            reputation_details TEXT
+            reputation_details TEXT,
+            banner TEXT,
+            purpose TEXT
         )
         """
     )
@@ -77,6 +79,15 @@ def init_db():
     )
 
     conn.commit()
+
+    # Ensure new columns exist in older databases
+    c.execute("PRAGMA table_info(events)")
+    cols = [row[1] for row in c.fetchall()]
+    if "banner" not in cols:
+        c.execute("ALTER TABLE events ADD COLUMN banner TEXT")
+    if "purpose" not in cols:
+        c.execute("ALTER TABLE events ADD COLUMN purpose TEXT")
+    conn.commit()
     conn.close()
     print("[INFO] Database initialized at:", DB_PATH)
 
@@ -89,8 +100,8 @@ def insert_event(event):
     c = conn.cursor()
     c.execute(
         """
-        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details, banner, purpose)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             event.get("timestamp"),
@@ -100,6 +111,8 @@ def insert_event(event):
             event.get("connections"),
             event.get("reputation"),
             event.get("reputation_details"),
+            event.get("banner"),
+            event.get("purpose"),
         ),
     )
     conn.commit()
@@ -115,8 +128,8 @@ def insert_events(events):
     c = conn.cursor()
     c.executemany(
         """
-        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (timestamp, process_name, pid, reason, connections, reputation, reputation_details, banner, purpose)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -127,6 +140,8 @@ def insert_events(events):
                 e.get("connections"),
                 e.get("reputation"),
                 e.get("reputation_details"),
+                e.get("banner"),
+                e.get("purpose"),
             )
             for e in events
         ],
@@ -142,7 +157,7 @@ def fetch_events(limit=100, process_name_filter=None):
     c = conn.cursor()
     if process_name_filter:
         query = """
-            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details
+            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details, banner, purpose
             FROM events
             WHERE process_name LIKE ?
             ORDER BY id DESC
@@ -151,7 +166,7 @@ def fetch_events(limit=100, process_name_filter=None):
         c.execute(query, (f"%{process_name_filter}%", limit))
     else:
         query = """
-            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details
+            SELECT id, timestamp, process_name, pid, reason, connections, reputation, reputation_details, banner, purpose
             FROM events
             ORDER BY id DESC
             LIMIT ?
@@ -171,6 +186,8 @@ def fetch_events(limit=100, process_name_filter=None):
             "connections": row[5],
             "reputation": row[6],
             "reputation_details": row[7],
+            "banner": row[8],
+            "purpose": row[9],
         }
         events.append(event)
     return events
